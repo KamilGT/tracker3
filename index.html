@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Личные финансы — трекер доходов и расходов</title>
+  <meta name="description" content="Простой трекер личных финансов: доходы, расходы, баланс, фильтры и статистика." />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💰</text></svg>" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="container">
+
+    <header class="app-header">
+      <div class="brand">
+        <div class="brand-icon" aria-hidden="true">💰</div>
+        <div>
+          <h1>Личные финансы</h1>
+          <p>Трекер доходов и расходов</p>
+        </div>
+      </div>
+      <button class="btn btn-primary" id="add-btn" type="button">＋ Добавить операцию</button>
+    </header>
+
+    <div class="demo-banner hidden" id="demo-banner" role="status">
+      <span class="demo-banner-icon" aria-hidden="true">✨</span>
+      <p class="demo-banner-text">
+        Показаны <strong>демонстрационные данные</strong> — они добавлены для примера и не являются
+        реальными финансовыми сведениями. Можно добавить свои операции или очистить список.
+      </p>
+      <div class="demo-banner-actions">
+        <button type="button" class="btn btn-secondary" id="demo-clear">Очистить и начать с нуля</button>
+        <button type="button" class="icon-btn" id="demo-dismiss" aria-label="Скрыть подсказку" title="Скрыть">✕</button>
+      </div>
+    </div>
+
+    <section class="summary" aria-label="Итоги за выбранный период">
+      <article class="summary-card balance">
+        <span class="summary-label">Баланс</span>
+        <span class="summary-value" id="balance">0&nbsp;₽</span>
+      </article>
+      <article class="summary-card income">
+        <span class="summary-label">Доходы</span>
+        <span class="summary-value" id="income-total">0&nbsp;₽</span>
+      </article>
+      <article class="summary-card expense">
+        <span class="summary-label">Расходы</span>
+        <span class="summary-value" id="expense-total">0&nbsp;₽</span>
+      </article>
+    </section>
+
+    <section class="controls" aria-label="Фильтры и поиск">
+      <div class="controls-grid">
+        <div class="control">
+          <label for="period-select">Период</label>
+          <select id="period-select">
+            <option value="month" selected>Текущий месяц</option>
+            <option value="all">Все операции</option>
+          </select>
+        </div>
+        <div class="control">
+          <label for="type-filter">Тип</label>
+          <select id="type-filter">
+            <option value="all" selected>Все типы</option>
+            <option value="expense">Расходы</option>
+            <option value="income">Доходы</option>
+          </select>
+        </div>
+        <div class="control">
+          <label for="category-filter">Категория</label>
+          <select id="category-filter"></select>
+        </div>
+        <div class="control">
+          <label for="search-input">Поиск</label>
+          <input type="search" id="search-input" placeholder="По комментарию…" autocomplete="off" />
+        </div>
+        <div class="reset-row">
+          <button type="button" class="btn btn-ghost" id="reset-filters">Сбросить фильтры</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="operations" aria-label="Список операций">
+      <div class="active-filters hidden" id="active-filters" aria-live="polite"></div>
+
+      <div class="operations-header">
+        <h2>Операции</h2>
+        <span class="ops-count" id="operations-count"></span>
+      </div>
+
+      <ul class="operations-list" id="operations-list"></ul>
+
+      <div class="empty-state hidden" id="empty-state">
+        <div class="empty-icon" aria-hidden="true">🗂️</div>
+        <h3>Пока нет операций</h3>
+        <p>Добавьте первый доход или расход — баланс и статистика появятся автоматически.</p>
+        <button type="button" class="btn btn-primary" id="empty-add-btn">Добавить операцию</button>
+      </div>
+
+      <div class="filtered-empty hidden" id="filtered-empty">
+        <div class="empty-icon" aria-hidden="true">🔍</div>
+        <h3>Ничего не найдено</h3>
+        <p>По текущим фильтрам и поиску операций нет. Попробуйте изменить условия.</p>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- Модальное окно: создание / редактирование операции -->
+  <div class="modal-overlay hidden" id="operation-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div class="modal">
+      <h2 id="modal-title">Новая операция</h2>
+      <p class="modal-desc">Заполните данные операции и сохраните.</p>
+
+      <form id="operation-form" novalidate>
+        <div class="segmented" role="radiogroup" aria-label="Тип операции">
+          <button type="button" class="segmented-btn segmented-expense active" id="type-expense" role="radio" aria-checked="true">Расход</button>
+          <button type="button" class="segmented-btn segmented-income" id="type-income" role="radio" aria-checked="false">Доход</button>
+        </div>
+
+        <div class="form-grid">
+          <div class="field field-amount" id="amount-field">
+            <label for="amount">Сумма</label>
+            <div class="amount-wrap">
+              <input type="number" id="amount" name="amount" min="0.01" step="0.01" placeholder="0,00" inputmode="decimal" autocomplete="off" />
+              <span class="currency" aria-hidden="true">₽</span>
+            </div>
+            <p class="field-error hidden" id="amount-error"></p>
+          </div>
+          <div class="field" id="date-field">
+            <label for="date">Дата</label>
+            <input type="date" id="date" name="date" />
+            <p class="field-error hidden" id="date-error"></p>
+          </div>
+          <div class="field" id="category-field">
+            <label for="category">Категория</label>
+            <select id="category" name="category"></select>
+            <p class="field-error hidden" id="category-error"></p>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="comment">Комментарий <span class="optional">(необязательно)</span></label>
+          <input type="text" id="comment" name="comment" maxlength="120" placeholder="Например: продукты на неделю" autocomplete="off" />
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary" id="form-cancel">Отмена</button>
+          <button type="submit" class="btn btn-primary" id="form-submit">Сохранить</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Модальное окно: подтверждение удаления -->
+  <div class="modal-overlay hidden" id="confirm-overlay" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
+    <div class="modal modal-confirm">
+      <h2 id="confirm-title">Удалить операцию?</h2>
+      <p class="modal-desc">Действие нельзя будет отменить.</p>
+      <div class="confirm-text" id="confirm-text"></div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" id="confirm-cancel">Отмена</button>
+        <button type="button" class="btn btn-danger" id="confirm-delete">Удалить</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
